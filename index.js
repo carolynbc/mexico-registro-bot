@@ -30,4 +30,4 @@ client.on("messageCreate", (message) => {
   }
 });
 
-client.login("TOKEN DO BOT");
+client.login(process.env.TOKEN);
