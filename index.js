@@ -17,11 +17,11 @@ client.once('ready', async () => {
         .addComponents(
             new ButtonBuilder()
             .setCustomId('registrar')
-            .setLabel('Registrar')
-            .setStyle(ButtonStyle.Primary)
+            .setLabel('Iniciar')
+            .setStyle(ButtonStyle.Success)
         );
 
-    canal.send({ content: 'Clique no botão para se registrar:', components: [row] });
+    canal.send({ content: '**Solicitação de Recrutamento**\n\n**Informações necessárias:**\nId no RP\nNome no RP\nCelular no RP\nNome do Recrutador\n\n**Importante:**\nEnvie apenas 1 solicitação!\nQualquer dúvida, entre em contato com seu recrutador!', components: [row] });
 });
 
 client.on('interactionCreate', async interaction => {
@@ -30,29 +30,29 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isButton() && interaction.customId === 'registrar') {
         const modal = new ModalBuilder()
             .setCustomId('registroModal')
-            .setTitle('Formulário de Registro');
+            .setTitle('Formulário de Recrutamento');
 
         const nomeInput = new TextInputBuilder()
             .setCustomId('nome')
-            .setLabel('Nome')
+            .setLabel('Nome no RP')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
         const idInput = new TextInputBuilder()
             .setCustomId('id')
-            .setLabel('ID')
+            .setLabel('ID no RP')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
         const telefoneInput = new TextInputBuilder()
             .setCustomId('telefone')
-            .setLabel('Telefone')
+            .setLabel('Celular no RP')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
         const recrutadorInput = new TextInputBuilder()
             .setCustomId('recrutador')
-            .setLabel('Recrutador')
+            .setLabel('Nome do Recrutador')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
@@ -74,9 +74,16 @@ client.on('interactionCreate', async interaction => {
         const recrutador = interaction.fields.getTextInputValue('recrutador');
 
         const embed = new EmbedBuilder()
-            .setTitle('Novo Registro')
-            .setDescription(`**Nome:** ${nome}\n**ID:** ${id}\n**Telefone:** ${telefone}\n**Recrutador:** ${recrutador}`)
-            .setColor('Blue');
+            .setTitle('Solicitação de Recrutamento')
+            .setColor('Blue')
+            .setDescription('Dados da Solicitação')
+            .addFields(
+                { name: 'Nome no RP', value: nome, inline: true },
+                { name: 'Id no RP', value: id, inline: true },
+                { name: 'Celular no RP', value: telefone, inline: true },
+                { name: 'Nome do Recrutador', value: recrutador, inline: true }
+            )
+            .setFooter({ text: 'Stevezin Free - Exclusividades na versão Premium (link na Bio)' });
 
         const row = new ActionRowBuilder()
             .addComponents(
@@ -103,11 +110,21 @@ client.on('interactionCreate', async interaction => {
         if (acao === 'aprovar') {
             const cargo = interaction.guild.roles.cache.get(roleAprovadoId);
             if (cargo) await membro.roles.add(cargo);
-            await interaction.update({ content: `Registro aprovado: ${membro.user.tag}`, embeds: [], components: [] });
+
+            const embedAprovado = new EmbedBuilder()
+                .setTitle('Recrutamento Aprovado')
+                .setColor('Green')
+                .setDescription('Status: Aprovado')
+                .addFields(
+                    { name: 'Usuário', value: `<@${userId}>`, inline: true },
+                    { name: 'Data', value: new Date().toLocaleString(), inline: true }
+                )
+                .setFooter({ text: 'Stevezin Free - Exclusividades na versão Premium (link na Bio)' });
+
+            await interaction.update({ embeds: [embedAprovado], components: [] });
         }
 
         if (acao === 'recusar') {
-            // Abrir modal para informar motivo da recusa
             const modalRecusa = new ModalBuilder()
                 .setCustomId(`recusaModal_${userId}`)
                 .setTitle('Motivo da Recusa');
@@ -129,7 +146,18 @@ client.on('interactionCreate', async interaction => {
         const motivo = interaction.fields.getTextInputValue('motivo');
         const membro = await interaction.guild.members.fetch(userId);
 
-        await interaction.update({ content: `Registro recusado: ${membro.user.tag}\nMotivo: ${motivo}`, embeds: [], components: [] });
+        const embedRecusado = new EmbedBuilder()
+            .setTitle('Recrutamento Recusado')
+            .setColor('Red')
+            .setDescription('Status: Recusado')
+            .addFields(
+                { name: 'Usuário', value: `<@${userId}>`, inline: true },
+                { name: 'Motivo', value: motivo, inline: false },
+                { name: 'Data', value: new Date().toLocaleString(), inline: true }
+            )
+            .setFooter({ text: 'Stevezin Free - Exclusividades na versão Premium (link na Bio)' });
+
+        await interaction.update({ embeds: [embedRecusado], components: [] });
     }
 });
 
