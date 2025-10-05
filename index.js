@@ -137,4 +137,4 @@ Qualquer dúvida, entre em contato com seu recrutador!`
     }
 });
 
-client.login('SEU_TOKEN_AQUI');
+client.login(process.env.TOKEN);
