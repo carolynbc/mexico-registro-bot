@@ -22,9 +22,9 @@ const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
-const ROLE_APROVADO_ID = "123456789012345678"; // ID do cargo que será dado ao aprovado
-const CANAL_REGISTROS_ID = "123456789012345679"; // Canal onde as solicitações vão
-const IMAGEM_BANNER = "https://i.imgur.com/abc123.png"; // Banner do topo do embed
+const ROLE_APROVADO_ID = "1360317242436223213"; // ID do cargo que será dado ao aprovado
+const CANAL_REGISTROS_ID = "1419811962782744628"; // Canal onde as solicitações vão
+const IMAGEM_BANNER = "https://i.imgur.com/R5AqaPZ.png"; // Banner do topo do embed
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
