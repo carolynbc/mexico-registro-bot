@@ -1,140 +1,176 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionType, EmbedBuilder } = require('discord.js');
+const express = require('express');
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
-// IDs dos canais
-const canalRegistroId = 'ID_DO_CANAL_DE_REGISTRO'; // Canal onde o usuário vai iniciar o registro
-const canalAprovacaoId = 'ID_DO_CANAL_DE_APROVACAO'; // Canal onde a equipe aprova ou recusa
+const TOKEN = process.env.TOKEN;
+const REGISTRO_CHANNEL_ID = process.env.REGISTRO_CHANNEL_ID;
+const ROLE_APROVADO_ID = process.env.ROLE_APROVADO_ID;
 
-client.once('ready', () => {
-    console.log(`Bot logado como ${client.user.tag}`);
+// ===== BOT ONLINE =====
+client.once('ready', async () => {
+  console.log(`${client.user.tag} está online!`);
+  
+  const canal = await client.channels.fetch(REGISTRO_CHANNEL_ID);
+  const row = new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId('iniciar')
+        .setLabel('Iniciar')
+        .setStyle(ButtonStyle.Success)
+    );
+
+  const embed = new EmbedBuilder()
+    .setTitle('Solicitação de Recrutamento')
+    .setColor('#00AAFF')
+    .setDescription(
+      '**Informações necessárias:**\n' +
+      'Id no RP\n' +
+      'Nome no RP\n' +
+      'Celular no RP\n' +
+      'Nome do Recrutador\n\n' +
+      '**Importante:**\nEnvie apenas 1 solicitação!\nQualquer dúvida, entre em contato com seu recrutador!'
+    )
+    .setFooter({ text: 'MÉXICO | By: 14lua' });
+
+  canal.send({ embeds: [embed], components: [row] });
 });
 
+// ===== BOTÃO INICIAR =====
 client.on('interactionCreate', async interaction => {
+  if (interaction.isButton() && interaction.customId === 'iniciar') {
+    const modal = new ModalBuilder()
+      .setCustomId('formularioRecrutamento')
+      .setTitle('Formulário de Recrutamento');
 
-    // BOTÃO INICIAR
-    if (interaction.isButton() && interaction.customId === 'iniciar_registro') {
-        // Cria o modal de registro
-        const modal = new ModalBuilder()
-            .setCustomId('modal_registro')
-            .setTitle('Formulário de Registro');
+    const nome = new TextInputBuilder()
+      .setCustomId('nome')
+      .setLabel('Nome no RP')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true);
 
-        const inputNome = new TextInputBuilder()
-            .setCustomId('nome')
-            .setLabel("Nome no RP")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
+    const id = new TextInputBuilder()
+      .setCustomId('id')
+      .setLabel('ID no RP')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true);
 
-        const inputId = new TextInputBuilder()
-            .setCustomId('id')
-            .setLabel("ID no RP")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
+    const telefone = new TextInputBuilder()
+      .setCustomId('telefone')
+      .setLabel('Celular no RP')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true);
 
-        const inputTelefone = new TextInputBuilder()
-            .setCustomId('telefone')
-            .setLabel("Celular no RP")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
+    const recrutador = new TextInputBuilder()
+      .setCustomId('recrutador')
+      .setLabel('Nome do Recrutador')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true);
 
-        const inputRecrutador = new TextInputBuilder()
-            .setCustomId('recrutador')
-            .setLabel("Nome do Recrutador")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(id),
+      new ActionRowBuilder().addComponents(nome),
+      new ActionRowBuilder().addComponents(telefone),
+      new ActionRowBuilder().addComponents(recrutador)
+    );
 
-        const row1 = new ActionRowBuilder().addComponents(inputNome);
-        const row2 = new ActionRowBuilder().addComponents(inputId);
-        const row3 = new ActionRowBuilder().addComponents(inputTelefone);
-        const row4 = new ActionRowBuilder().addComponents(inputRecrutador);
+    await interaction.showModal(modal);
+  }
 
-        modal.addComponents(row1, row2, row3, row4);
+  // ===== ENVIAR FORMULÁRIO =====
+  if (interaction.type === InteractionType.ModalSubmit && interaction.customId === 'formularioRecrutamento') {
+    const id = interaction.fields.getTextInputValue('id');
+    const nome = interaction.fields.getTextInputValue('nome');
+    const telefone = interaction.fields.getTextInputValue('telefone');
+    const recrutador = interaction.fields.getTextInputValue('recrutador');
 
-        await interaction.showModal(modal);
+    const embed = new EmbedBuilder()
+      .setTitle('Solicitação de Recrutamento')
+      .setColor('#0099ff')
+      .addFields(
+        { name: 'Por', value: `${interaction.user}`, inline: false },
+        { name: 'Em', value: new Date().toLocaleString('pt-BR'), inline: false },
+        { name: 'Id no RP', value: id, inline: true },
+        { name: 'Nome no RP', value: nome, inline: true },
+        { name: 'Celular no RP', value: telefone, inline: true },
+        { name: 'Nome do Recrutador', value: recrutador, inline: true }
+      )
+      .setFooter({ text: 'MÉXICO | By: 14lua' });
+
+    const botoes = new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId(`aprovar_${interaction.user.id}`)
+          .setLabel('✅ Aprovar')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`recusar_${interaction.user.id}`)
+          .setLabel('❌ Recusar')
+          .setStyle(ButtonStyle.Danger)
+      );
+
+    const canal = await client.channels.fetch(REGISTRO_CHANNEL_ID);
+    await canal.send({ embeds: [embed], components: [botoes] });
+
+    await interaction.reply({ content: '✅ Sua solicitação foi enviada para análise!', ephemeral: true });
+  }
+
+  // ===== AÇÃO DE APROVAR / RECUSAR =====
+  if (interaction.isButton()) {
+    const [acao, userId] = interaction.customId.split('_');
+    if (!acao || !userId) return;
+
+    if (acao === 'aprovar') {
+      const embedAprovado = new EmbedBuilder()
+        .setTitle('Recrutamento Aprovado')
+        .setColor('Green')
+        .addFields(
+          { name: 'Por', value: `<@${userId}>`, inline: true },
+          { name: 'Em', value: new Date().toLocaleString('pt-BR'), inline: true }
+        )
+        .setFooter({ text: 'MÉXICO | By: 14lua' });
+
+      await interaction.update({ embeds: [embedAprovado], components: [] });
     }
 
-    // MODAL DE REGISTRO
-    if (interaction.type === InteractionType.ModalSubmit && interaction.customId === 'modal_registro') {
-        const nome = interaction.fields.getTextInputValue('nome');
-        const id = interaction.fields.getTextInputValue('id');
-        const telefone = interaction.fields.getTextInputValue('telefone');
-        const recrutador = interaction.fields.getTextInputValue('recrutador');
+    if (acao === 'recusar') {
+      const modal = new ModalBuilder()
+        .setCustomId(`motivoRecusa_${userId}`)
+        .setTitle('Motivo da Recusa');
 
-        const embedRegistro = new EmbedBuilder()
-            .setTitle('Novo Registro')
-            .setColor('Yellow')
-            .setDescription(`**Nome:** ${nome}\n**ID:** ${id}\n**Telefone:** ${telefone}\n**Recrutador:** ${recrutador}`);
+      const motivo = new TextInputBuilder()
+        .setCustomId('motivo')
+        .setLabel('Motivo da recusa')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
 
-        const botoes = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('aprovar')
-                    .setLabel('Aprovar ✅')
-                    .setStyle(ButtonStyle.Success),
-                new ButtonBuilder()
-                    .setCustomId('recusar')
-                    .setLabel('Recusar ❌')
-                    .setStyle(ButtonStyle.Danger)
-            );
-
-        const canalAprovacao = interaction.guild.channels.cache.get(canalAprovacaoId);
-        if (!canalAprovacao) return interaction.reply({ content: 'Canal de aprovação não encontrado!', ephemeral: true });
-
-        await canalAprovacao.send({ embeds: [embedRegistro], components: [botoes] });
-        await interaction.reply({ content: 'Seu registro foi enviado para aprovação!', ephemeral: true });
+      modal.addComponents(new ActionRowBuilder().addComponents(motivo));
+      await interaction.showModal(modal);
     }
+  }
 
-    // APROVAÇÃO/RECUSA
-    if (interaction.isButton() && (interaction.customId === 'aprovar' || interaction.customId === 'recusar')) {
-        const embedOriginal = interaction.message.embeds[0];
-        if (!embedOriginal) return interaction.reply({ content: 'Embed não encontrado!', ephemeral: true });
+  // ===== MODAL DE RECUSA =====
+  if (interaction.type === InteractionType.ModalSubmit && interaction.customId.startsWith('motivoRecusa_')) {
+    const userId = interaction.customId.split('_')[1];
+    const motivo = interaction.fields.getTextInputValue('motivo');
 
-        const nome = embedOriginal.description.match(/\*\*Nome:\*\* (.+)/)[1];
+    const embedRecusado = new EmbedBuilder()
+      .setTitle('Recrutamento Recusado')
+      .setColor('Red')
+      .addFields(
+        { name: 'Por', value: `<@${userId}>`, inline: true },
+        { name: 'Motivo', value: motivo, inline: false },
+        { name: 'Data', value: new Date().toLocaleString('pt-BR'), inline: true }
+      )
+      .setFooter({ text: 'MÉXICO | By: 14lua' });
 
-        if (interaction.customId === 'aprovar') {
-            await interaction.update({ content: `✅ Registro de ${nome} aprovado!`, embeds: [], components: [] });
-        }
-
-        if (interaction.customId === 'recusar') {
-            await interaction.reply({ content: 'Digite o motivo da recusa:', ephemeral: true });
-
-            const filtro = m => m.author.id === interaction.user.id;
-            const coletor = interaction.channel.createMessageCollector({ filter: filtro, max: 1, time: 60000 });
-
-            coletor.on('collect', async m => {
-                await interaction.editReply({ content: `❌ Registro de ${nome} recusado!\nMotivo: ${m.content}` });
-            });
-        }
-    }
+    await interaction.update({ embeds: [embedRecusado], components: [] });
+  }
 });
 
-// MENSAGEM DE INTRODUÇÃO
-client.on('messageCreate', async message => {
-    if (message.channel.id === canalRegistroId && message.content.toLowerCase() === '!registrar') {
-        const botoes = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('iniciar_registro')
-                    .setLabel('Iniciar')
-                    .setStyle(ButtonStyle.Primary)
-            );
+client.login(TOKEN);
 
-        const embedIntro = new EmbedBuilder()
-            .setTitle('Solicitação de Recrutamento')
-            .setColor('Green')
-            .setDescription(
-`**Informações necessárias**
-Id no RP
-Nome no RP
-Celular no RP
-Nome do Recrutador
-
-**Importante**
-Envie apenas 1 solicitação!
-Qualquer dúvida, entre em contato com seu recrutador!`
-            );
-
-        await message.channel.send({ embeds: [embedIntro], components: [botoes] });
-    }
-});
-
-client.login(process.env.TOKEN);
+// ===== SERVIDOR WEB (para manter 24h com UptimeRobot) =====
+const app = express();
+app.get('/', (req, res) => res.send('Bot online 24h'));
+app.listen(3000, () => console.log('Servidor rodando na porta 3000'));
